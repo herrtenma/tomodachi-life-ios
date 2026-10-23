@@ -1,0 +1,20 @@
+{
+ "format": 1,
+ "id": "tomodachi-life",
+ "port_name": "Tomodachi",
+ "homepage": "https://github.com/herrtenma/tomodachi-life-ios",
+ "game": {
+  "name": "Tomodachi Life: Living the Dream",
+  "title_id": "010051F0207B2000",
+  "version": 0,
+  "display_version": "1.0.0"
+ },
+ "dump_formats": [
+  "xci"
+ ],
+ "app": {
+  "path": "Payload/nxrt.app",
+  "executable": "nxrt"
+ },
+ "after_install": "Open the app and choose the same .xci (and prod.keys) once: the game reads its data from it."
+}

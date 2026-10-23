@@ -1,0 +1,35 @@
+[
+ {
+  "name": "rtld",
+  "slot": 0,
+  "output_sha256": "9e1a86e796a7e3816c2c9b1760cfcf6fa41fc337b7a8dd1086ed7ed237a02476",
+  "source": "exefs:rtld",
+  "input_sha256": "4cdf83287092a882a02f486c279d1cca2dcb5e3aad1e098efa75cb045d7aee0d",
+  "patch": "patches/rtld.nxwp",
+  "words": 15
+ },
+ {
+  "name": "main",
+  "slot": 1,
+  "output_sha256": "cb5ae056314c5305652de9626b786456da11cf4c4e0075ab6de52ecbd0eeea06",
+  "source": "exefs:main",
+  "input_sha256": "e5cbca793c54f1370c7470a8029be1d2c9c3c1c8ccf8af36a9d86727d547c417",
+  "patch": "patches/main.nxwp",
+  "words": 38369
+ },
+ {
+  "name": "subsdk9",
+  "slot": 2,
+  "output_sha256": "6ef76992015b1561bffc74d08a757cf13ff2c9774b08e405747ba0cf3c6c36dc",
+  "source": "modules/subsdk9.img"
+ },
+ {
+  "name": "sdk",
+  "slot": 3,
+  "output_sha256": "c785d10e919609b0210c9294588aea98926a1e76512591a2f6ce4736d441ce39",
+  "source": "exefs:sdk",
+  "input_sha256": "a575acc9fc62bb7a2e33a76eb99e8e8724abb9f8daeba39e9bcdd1f344f3bc09",
+  "patch": "patches/sdk.nxwp",
+  "words": 15797
+ }
+]

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- On-device shader translator (shader_xlat.m): Ryujinx's shader translator + MslFix, published as a NativeAOT
+       static library (`make -C runtime/xlat`: ios-arm64, iossimulator-arm64, osx-arm64). -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>preview</LangVersion>
+    <PublishAot>true</PublishAot>
+    <PublishAotUsingRuntimePack>true</PublishAotUsingRuntimePack>
+    <NativeLib>Static</NativeLib>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../third_party/ryujinx-shader/**/*.cs" />
+    <EmbeddedResource Include="../../third_party/ryujinx-shader/Ryujinx.Graphics.Shader/CodeGen/Glsl/HelperFunctions/*.glsl"
+                      LogicalName="Ryujinx.Graphics.Shader/CodeGen/Glsl/HelperFunctions/%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,17 @@
+{
+  "latest": "0.1.0",
+  "url": "https://github.com/herrtenma/tomodachi-life-ios/releases/latest",
+  "entries": [
+    {
+      "version": "0.1.0",
+      "date": "2026-10-23",
+      "title": "First release",
+      "notes": [
+        "Tomodachi Life: Living the Dream runs natively on iPhone and iPad, built on your own game dump.",
+        "Import a save from Ryujinx, yuzu and its forks, or a Checkpoint / JKSV backup (Settings > Islands > Import a save).",
+        "Respect silent mode (Settings > Feedback): off by default, so the game plays even with the phone on silent.",
+        "Send feedback and crash reports from the launcher; reports include the game log, never your saves."
+      ]
+    }
+  ]
+}

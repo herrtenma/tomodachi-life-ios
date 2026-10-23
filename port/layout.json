@@ -1,0 +1,72 @@
+[
+ {
+  "name": "rtld",
+  "slot": 0,
+  "text_size": 9536,
+  "ro_off": 12288,
+  "ro_size": 2604,
+  "data_off": 16384,
+  "data_size": 4104,
+  "bss": 4088,
+  "image_size": 20488,
+  "span": 32768,
+  "hooks": []
+ },
+ {
+  "name": "main",
+  "slot": 1,
+  "text_size": 39642784,
+  "ro_off": 39645184,
+  "ro_size": 10794104,
+  "data_off": 50442240,
+  "data_size": 6890948,
+  "bss": 29276732,
+  "image_size": 57333188,
+  "span": 86622208,
+  "hooks": [
+   {
+    "offset": 4636800,
+    "symbol": "nx_ui_ortho"
+   },
+   {
+    "offset": 7259072,
+    "symbol": "nx_ui_persp"
+   },
+   {
+    "offset": 4647284,
+    "symbol": "nx_wide_crop"
+   }
+  ]
+ },
+ {
+  "name": "subsdk9",
+  "slot": 2,
+  "text_size": 1572864,
+  "ro_off": 1572864,
+  "ro_size": 16384,
+  "data_off": 1589248,
+  "data_size": 288,
+  "bss": 507616,
+  "image_size": 1589536,
+  "span": 2097152,
+  "hooks": []
+ },
+ {
+  "name": "sdk",
+  "slot": 3,
+  "text_size": 6692848,
+  "ro_off": 6692864,
+  "ro_size": 5024236,
+  "data_off": 11718656,
+  "data_size": 349416,
+  "bss": 850712,
+  "image_size": 12068072,
+  "span": 12926976,
+  "hooks": [
+   {
+    "offset": 5254416,
+    "symbol": "nx_nvn_bootstrap_loader"
+   }
+  ]
+ }
+]

@@ -1,0 +1,22 @@
+# Game files never belong here: dumps, keys, extracted or converted content
+*.xci
+*.nsp
+*.nca
+*.nso
+*.keys
+romfs*.bin
+.DS_Store
+__pycache__/
+# Build outputs
+runtime/build/
+runtime/xlat/build/
+runtime/xlat/bin/
+runtime/xlat/obj/
+ios/build/
+ios/build-sim/
+tools/texconv/build/
+# Run-time data of a local Mac run (saves, the shader cache, pipeline cache, log)
+runtime/data*/
+runtime/shaders/
+runtime/pipecache/
+runtime/nxrt.log

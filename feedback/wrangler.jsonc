@@ -1,0 +1,11 @@
+// Feedback and crash reports from the app (feedback/README.md). Reports go to R2; a Durable Object counts per device, per IP and per day.
+// Deploy: `npx wrangler login`, `npx wrangler r2 bucket create tomodachi-feedback`, `npx wrangler secret put ADMIN_TOKEN`, `npm run deploy`.
+{
+  "name": "tomodachi-feedback",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-01",
+  "preview_urls": false,
+  "durable_objects": { "bindings": [{ "name": "LIMITS", "class_name": "Limits" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Limits"] }],
+  "r2_buckets": [{ "binding": "REPORTS", "bucket_name": "tomodachi-feedback" }]
+}

@@ -1,0 +1,7 @@
+Ryujinx shader translator (MIT, see LICENSE.txt), from https://github.com/NextendoNetwork/Ryujinx-Nextendo at
+commit bd50fbf8eb3da6441c3e35cd795c2b06fbb91f41 (a community continuation of Ryujinx).
+
+Vendored: src/Ryujinx.Graphics.Shader, src/Spv.Generator and the few src/Ryujinx.Common files the translator uses
+(Common/: StructArrayHelpers.cs, IArray.cs, BitUtils.cs, BitfieldExtensions.cs, MemoryOwner.cs, ObjectPool.cs).
+Common/EmbeddedResources.cs is a small stand-in written for this project.
+CHANGES.patch: this project's modifications to the translator (already applied here).

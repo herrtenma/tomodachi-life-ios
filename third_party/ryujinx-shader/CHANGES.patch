@@ -1,0 +1,180 @@
+diff --git a/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/CodeGenContext.cs b/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/CodeGenContext.cs
+index 3f80c2a..41d1d33 100644
+--- a/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/CodeGenContext.cs
++++ b/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/CodeGenContext.cs
+@@ -46,6 +46,10 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Spirv
+         private readonly Dictionary<int, Instruction> _funcArgs = new();
+         private readonly Dictionary<int, (StructuredFunction, Instruction)> _functions = new();
+ 
++        // nxrt patch: function-local temporaries for call arguments that are expressions
++        // (SPIR-V calls take pointers; OpVariable must sit at the start of the function).
++        public readonly Dictionary<(AstOperation, int), Instruction> CallArgTemps = new();
++
+         private class BlockState
+         {
+             private int _entryCount;
+diff --git a/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Declarations.cs b/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Declarations.cs
+index e1571fc..5f7980c 100644
+--- a/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Declarations.cs
++++ b/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Declarations.cs
+@@ -39,6 +39,55 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Spirv
+                 context.AddLocalVariable(spvLocal);
+                 context.DeclareLocal(local, spvLocal);
+             }
++
++            // Block conditions (if / loop) are expressions the visitor doesn't yield; calls inside them need
++            // temporaries too (3f609aeb.vs: a call under a condition failed with KeyNotFoundException).
++            AstBlockVisitor visitor = new(function.MainBlock);
++            visitor.BlockEntered += (sender, e) =>
++            {
++                if (e.Block.Condition != null)
++                {
++                    DeclareCallArgTemps(context, e.Block.Condition);
++                }
++            };
++
++            foreach (IAstNode node in visitor.Visit())
++            {
++                DeclareCallArgTemps(context, node);
++            }
++        }
++
++        // nxrt patch: see CodeGenContext.CallArgTemps.
++        private static void DeclareCallArgTemps(CodeGenContext context, IAstNode node)
++        {
++            if (node is AstAssignment assignment)
++            {
++                DeclareCallArgTemps(context, assignment.Source);
++            }
++            else if (node is AstOperation operation)
++            {
++                for (int i = 0; i < operation.SourcesCount; i++)
++                {
++                    DeclareCallArgTemps(context, operation.GetSource(i));
++                }
++
++                if (operation.Inst == IntermediateRepresentation.Instruction.Call)
++                {
++                    (StructuredFunction callee, _) = context.GetFunction(((AstOperand)operation.GetSource(0)).Value);
++
++                    for (int i = 1; i < operation.SourcesCount; i++)
++                    {
++                        if (operation.GetSource(i) is not AstOperand { Type: IntermediateRepresentation.OperandType.LocalVariable })
++                        {
++                            SpvInstruction pointerType = context.TypePointer(StorageClass.Function, context.GetType(callee.GetArgumentType(i - 1)));
++                            SpvInstruction temp = context.Variable(pointerType, StorageClass.Function);
++
++                            context.AddLocalVariable(temp);
++                            context.CallArgTemps[(operation, i)] = temp;
++                        }
++                    }
++                }
++            }
+         }
+ 
+         public static void DeclareAll(CodeGenContext context, StructuredProgramInfo info)
+diff --git a/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Instructions.cs b/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Instructions.cs
+index 77a23d1..e6dd581 100644
+--- a/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Instructions.cs
++++ b/src/Ryujinx.Graphics.Shader/CodeGen/Spirv/Instructions.cs
+@@ -316,9 +316,17 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Spirv
+             {
+                 IAstNode operand = operation.GetSource(i + 1);
+ 
+-                AstOperand local = (AstOperand)operand;
+-                Debug.Assert(local.Type == OperandType.LocalVariable);
+-                args[i] = context.GetLocalPointer(local);
++                if (operand is AstOperand { Type: OperandType.LocalVariable } local)
++                {
++                    args[i] = context.GetLocalPointer(local);
++                }
++                else
++                {
++                    // nxrt patch: expression argument -> temporary declared in Declarations.DeclareLocals.
++                    SpvInstruction temp = context.CallArgTemps[(operation, i + 1)];
++                    context.Store(temp, context.Get(function.GetArgumentType(i), operand));
++                    args[i] = temp;
++                }
+             }
+ 
+             AggregateType retType = function.ReturnType;
+@@ -1697,6 +1705,11 @@ namespace Ryujinx.Graphics.Shader.CodeGen.Spirv
+                     BufferDefinition buffer = storageKind == StorageKind.ConstantBuffer
+                         ? context.Properties.ConstantBuffers[bindingIndex.Value]
+                         : context.Properties.StorageBuffers[bindingIndex.Value];
++                    if (fieldIndex.Value >= buffer.Type.Fields.Length)
++                    {
++                        throw new InvalidOperationException($"nxrt: {storageKind} binding {bindingIndex.Value} ({buffer.Name}) has {buffer.Type.Fields.Length} fields, field {fieldIndex.Value} requested; {operation.SourcesCount} sources");
++                    }
++
+                     StructureField field = buffer.Type.Fields[fieldIndex.Value];
+ 
+                     storageClass = StorageClass.Uniform;
+diff --git a/src/Ryujinx.Graphics.Shader/StructuredIr/AstOptimizer.cs b/src/Ryujinx.Graphics.Shader/StructuredIr/AstOptimizer.cs
+index 3f2e499..20b05ed 100644
+--- a/src/Ryujinx.Graphics.Shader/StructuredIr/AstOptimizer.cs
++++ b/src/Ryujinx.Graphics.Shader/StructuredIr/AstOptimizer.cs
+@@ -8,7 +8,7 @@ namespace Ryujinx.Graphics.Shader.StructuredIr
+ {
+     static class AstOptimizer
+     {
+-        public static void Optimize(StructuredProgramContext context)
++        public static void Optimize(StructuredProgramContext context, bool allowElseIf = true)
+         {
+             AstBlock mainBlock = context.CurrentFunction.MainBlock;
+ 
+@@ -22,6 +22,13 @@ namespace Ryujinx.Graphics.Shader.StructuredIr
+                 {
+                     if (node is AstAssignment assignment && assignment.Destination is AstOperand propVar)
+                     {
++                        // nxrt: an atomic (e.g. Maxwell RED, which has no result) must stay where it is even
++                        // when its result is unused; removing the assignment dropped the memory write.
++                        if (assignment.Source is AstOperation srcOp && srcOp.Inst.IsAtomic())
++                        {
++                            continue;
++                        }
++
+                         bool isWorthPropagating = propVar.Uses.Count == 1 || IsWorthPropagating(assignment.Source);
+ 
+                         if (propVar.Defs.Count == 1 && isWorthPropagating)
+@@ -39,7 +46,7 @@ namespace Ryujinx.Graphics.Shader.StructuredIr
+                 }
+             }
+ 
+-            RemoveEmptyBlocks(mainBlock);
++            RemoveEmptyBlocks(mainBlock, allowElseIf);
+         }
+ 
+         private static bool IsWorthPropagating(IAstNode source)
+@@ -84,7 +91,7 @@ namespace Ryujinx.Graphics.Shader.StructuredIr
+             }
+         }
+ 
+-        private static void RemoveEmptyBlocks(AstBlock mainBlock)
++        private static void RemoveEmptyBlocks(AstBlock mainBlock, bool allowElseIf)
+         {
+             Queue<AstBlock> pending = new();
+ 
+@@ -129,7 +136,8 @@ namespace Ryujinx.Graphics.Shader.StructuredIr
+                         parent.Remove(block);
+                     }
+                 }
+-                else if (isIf && parent.Type == AstBlockType.Else && parent.Count == (hasElse ? 2 : 1))
++                // nxrt: the SPIR-V generator has no ElseIf (its condition was dropped, the body unreachable): keep Else { If } there.
++                else if (allowElseIf && isIf && parent.Type == AstBlockType.Else && parent.Count == (hasElse ? 2 : 1))
+                 {
+                     AstBlock parentOfParent = parent.Parent;
+ 
+diff --git a/src/Ryujinx.Graphics.Shader/StructuredIr/StructuredProgram.cs b/src/Ryujinx.Graphics.Shader/StructuredIr/StructuredProgram.cs
+index 63bd820..672af6f 100644
+--- a/src/Ryujinx.Graphics.Shader/StructuredIr/StructuredProgram.cs
++++ b/src/Ryujinx.Graphics.Shader/StructuredIr/StructuredProgram.cs
+@@ -70,7 +70,7 @@ namespace Ryujinx.Graphics.Shader.StructuredIr
+ 
+                 GotoElimination.Eliminate(context.GetGotos());
+ 
+-                AstOptimizer.Optimize(context);
++                AstOptimizer.Optimize(context, targetLanguage != TargetLanguage.Spirv);
+ 
+                 context.LeaveFunction();
+             }
